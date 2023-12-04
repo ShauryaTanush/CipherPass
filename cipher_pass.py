@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox, Toplevel, PhotoImage
 from tkinter.constants import END
+import re
 import os
 import json
 import base64
@@ -9,7 +10,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.fernet import Fernet
 import pyperclip
-from random import choice, randint
+from random import choice, randint, shuffle
 from tkinter import W
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -130,29 +131,47 @@ def main_application_window(window):
     # Configure the main window's background
     window.configure(background='#333333')
 
+    # Search Frame
+    search_frame = ttk.Frame(main_frame)
+    search_frame.grid(row=1, column=0, sticky='ew') 
+    search_frame.columnconfigure(0, weight=1)
+
+    # Search Entry
+    search_entry = tk.Entry(search_frame, width=35)
+    search_entry.grid(row=0, column=0, padx=(10, 0), pady=10, sticky='ew')
+
+    # Search Button
+    search_button = ttk.Button(search_frame, text="Search", command=lambda: search_website(search_entry.get()))
+    search_button.grid(row=0, column=1, padx=(10, 0), pady=10)
 
     def generate_password():
          # Randomly generates a password
 
-        letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
-               'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-               'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-        numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-        symbols = ['!', '#', '$', '%', '&', '(', ')', '*', '+']
+        letters = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"  
+        numbers = "23456789"  
+        symbols = "!#$%&*+@^_"  
 
-        password_letters = [choice(letters) for _ in range(randint(8, 10))]
-        password_symbols = [choice(symbols) for _ in range(randint(2, 4))]
-        password_numbers = [choice(numbers) for _ in range(randint(2, 4))]
+        # Ensure at least one character of each  type
+        password = [
+            choice(letters),
+            choice(numbers),
+            choice(symbols)
+        ]
 
-        password_list = password_letters + password_symbols + password_numbers
+        
+        password += [
+            choice(letters + numbers + symbols)
+            for _ in range(randint(8, 13))  
+        ]
 
-        shuffle(password_list)
+        shuffle(password)  # Shuffle to randomize the order
 
-        password = "".join(password_list)
+        sec_password = "".join(password)
+        
 
         password_entry.delete(0, END)
-        password_entry.insert(0, password)
-        pyperclip.copy(password)
+        password_entry.insert(0, sec_password)
+        pyperclip.copy(sec_password)
 
 
     def create_encryption_key():
@@ -224,55 +243,6 @@ def main_application_window(window):
             load_data_to_treeview()
             show_passwords_frame()  # Show the passwords frame with updated data
 
-# Load data to Treeview function
-    # def load_data_to_treeview():
-    #     global current_selection
-    #     for item in tree.get_children():
-    #         tree.delete(item)
-    #     try:
-    #         with open("passwords.json", "r") as file:
-    #             file_content = file.read()
-    #             # Check if the file is not empty
-    #             if file_content:
-    #                 # Convert string back into JSON
-    #                 data = json.loads(file_content)
-    #                 for website, details in data.items():
-    #                     iid = tree.insert("", 'end', text=website, values=(details['username']))
-    #                     if website == current_selection:
-    #                         tree.selection_set(iid)
-    #     except FileNotFoundError:
-    #         print("The passwords.json file is not found, creating a new one.")
-    #         with open("passwords.json", "w") as file:
-    #             json.dump({}, file)  # Create an empty JSON object
-    #     except json.JSONDecodeError:
-    #         print("The passwords.json file is empty or contains invalid JSON.")
-    #         with open("passwords.json", "w") as file:
-    #             json.dump({}, file)  # Reset file to an empty JSON object
-
-    # Load data to Treeview function
-    # def load_data_to_treeview():
-    #     global current_selection
-    #     for item in tree.get_children():
-    #         tree.delete(item)
-    #     try:
-    #         with open("passwords.json", "r") as file:
-    #             file_content = file.read()
-    #             # Check if the file is not empty
-    #             if file_content:
-    #                 # Convert string back into JSON
-    #                 data = json.loads(file_content)
-    #                 for website, details in data.items():
-    #                     iid = tree.insert("", 'end', text=website, values=(decrypt_data(details['username']),))
-    #                     if website == current_selection:
-    #                         tree.selection_set(iid)
-    #     except FileNotFoundError:
-    #         print("The passwords.json file is not found, creating a new one.")
-    #         with open("passwords.json", "w") as file:
-    #             json.dump({}, file)  # Create an empty JSON object
-    #     except json.JSONDecodeError:
-    #         print("The passwords.json file is empty or contains invalid JSON.")
-    #         with open("passwords.json", "w") as file:
-    #             json.dump({}, file)  # Reset file to an empty JSON object
 
     def load_data_to_treeview():
         global current_selection
@@ -303,31 +273,60 @@ def main_application_window(window):
             with open("passwords.json", "w") as file:
                 json.dump({}, file)  # Reset file to an empty JSON object
 
- # Handle Treeview item click
+# Function to show the details of the search term
 
-    
+    def verify_and_show_details(website):
+    # Call the master password verification function
+        if verify_master_password():
+            try:
+                with open("passwords.json", "r") as file:
+                    data = json.load(file)
+                
+                username_encrypted = data[website]['username']
+                password_encrypted = data[website]['password']
+                show_email_details_window(website, username_encrypted, password_encrypted)
+            except (FileNotFoundError, json.JSONDecodeError):
+                messagebox.showerror("Error", "Could not load account details.")
+        else:
+            messagebox.showerror("Verification Failed", "Incorrect master password.")
 
-    # Search function
-    # def search():
-    #     website = website_entry.get()
-    #     if len(website) == 0:
-    #         messagebox.showinfo(title="Oops", message="No website was specified.")
-    #     else:
-    #         try:
-    #             with open("passwords.json", "r") as file:
-    #                 # Reading old data
-    #                 data = json.load(file)
-    #         except FileNotFoundError as err:
-    #             messagebox.showinfo(title="Error", message="No data file found.")
-    #         else:
-    #             if website in data:
-    #                 username = data[website]['username']
-    #                 password = data[website]['password']
-    #                 messagebox.showinfo(title=website, message=f"Username: {username}\n Password: {password}.")
-    #             else:
-    #                 messagebox.showinfo(title="Oops", message=f"No details for {website} exists.")
-    #         finally:
-    #             website_entry.delete(0, END)
+# Search functionality
+
+
+    def search_website(search_input):
+        try:
+            with open("passwords.json", "r") as file:
+                data = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            messagebox.showerror("Error", "Could not load the password file.")
+            return
+
+        # Use regular expression to match the search input
+        pattern = re.compile(re.escape(search_input), re.IGNORECASE)
+        matches = {website: details for website, details in data.items() if pattern.search(website)}
+
+        if matches:
+            # Create a pop-up window to display the search results
+            results_popup = Toplevel(window)
+            results_popup.title("Search Results")
+
+            # Listbox to display the matches
+            results_listbox = tk.Listbox(results_popup)
+            results_listbox.pack(padx=10, pady=10)
+
+            for website in matches.keys():
+                results_listbox.insert(tk.END, website)
+
+            # Function to handle the selection of an item
+            def on_result_select(event):
+                selected_website = results_listbox.get(results_listbox.curselection())
+                results_popup.destroy()  # Close the search results window
+                verify_and_show_details(selected_website)
+
+            results_listbox.bind("<<ListboxSelect>>", on_result_select)
+        else:
+            messagebox.showinfo("Search", "No matching websites found.")
+
 
 # Add Password Frame
     add_password_frame = tk.Frame(window)
@@ -371,29 +370,6 @@ def main_application_window(window):
         passwords_frame.grid()
         load_data_to_treeview()
        
-
-
- # Email Details functions
-    def show_email_details(event):
-        # Get the selected item
-        selected_item = tree.selection()[0]
-        website = tree.item(selected_item, 'text')
-
-        # Verify the master password before showing details
-        if verify_master_password():
-            # Assuming the details are in the same JSON file
-            try:
-                with open("passwords.json", "r") as file:
-                    data = json.load(file)
-                    if website in data:
-                        username = data[website]['username']
-                        password = data[website]['password']
-                        messagebox.showinfo(title=website, message=f"Username: {username}\nPassword: {password}")
-                    else:
-                        messagebox.showinfo(title="Error", message="Details not found.")
-            except (FileNotFoundError, json.JSONDecodeError):
-                messagebox.showinfo(title="Error", message="No data file found.")
-
 
    
     global username_content
@@ -616,22 +592,6 @@ def main_application_window(window):
     window.title("CipherPass")
     window.config(padx=50, pady=50)
 
-    
-
-    # Treeview
-    
-#     tree = ttk.Treeview(passwords_frame, columns=("Email"), show='headings', height=10)
-#     tree.column("#0", width=120)
-#     tree.heading("#0", text="Website")
-#     tree.column("Email", anchor=W, width=180)
-#     tree.heading("Email", text="Email/Username")
-#     tree.grid(row=1, column=0, columnspan=3, pady=10, sticky='nsew')
-#    # tree.bind('<<TreeviewSelect>>', show_email_details)
-#     tree.bind('<<TreeviewSelect>>', on_treeview_click)
-#     # Add Button (+)
-#     add_button = ttk.Button(passwords_frame, text="+", command=show_add_password_frame)
-#     add_button.grid(row=0, column=0, sticky='ne', padx=10, pady=10)
-
       # Treeview
     tree = ttk.Treeview(passwords_frame, columns=("Website", "Email"), show='headings', height=10)
     tree.grid(row=1, column=0, columnspan=3, pady=10, sticky='nsew')
@@ -640,12 +600,6 @@ def main_application_window(window):
     tree.heading("Website", text="Website")
     tree.column("Email", width=180, anchor='w')
     tree.heading("Email", text="Email/Username")
-
-#     tree.heading("#0", text="Website")
-# #     tree.column("Email", anchor=W, width=180)
-#     tree.heading("Email", text="Email/Username")
-#     tree.grid(row=1, column=0, columnspan=3, pady=10, sticky='nsew')
-#    # tree.bind('<<TreeviewSelect>>', show_email_details)
     tree.bind('<<TreeviewSelect>>', on_treeview_click)
 
     # Treeview column configuration for proper scaling
