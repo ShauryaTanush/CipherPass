@@ -25,16 +25,17 @@ SALT_FILE = "salt.txt"
 current_selection = None
 global detail_window
 detail_window = None
-process_treeview_click = True 
+process_treeview_click = True
 
 
 # Password hashing and verification functions
 def create_salt():
-    
+
     salt = os.urandom(16)
     with open(SALT_FILE, 'wb') as f:
         f.write(salt)
     return salt
+
 
 def load_salt():
     if not os.path.exists(SALT_FILE):
@@ -42,6 +43,7 @@ def load_salt():
     with open(SALT_FILE, 'rb') as f:
         salt = f.read()
     return salt
+
 
 def hash_password(password, salt):
     # Using PBKDF2HMAC to create a hash of the password
@@ -54,9 +56,11 @@ def hash_password(password, salt):
     )
     return base64.urlsafe_b64encode(kdf.derive(password.encode())).decode()
 
+
 def save_master_password(hash):
     with open(MASTER_PASSWORD_FILE, 'w') as f:
         f.write(hash)
+
 
 def verify_master_password():
     print("Verifying master password...")
@@ -64,18 +68,21 @@ def verify_master_password():
     try:
         with open(MASTER_PASSWORD_FILE, 'r') as f:
             stored_master_password_hash = f.read()
-            print(f"Stored master password hash: {stored_master_password_hash}")
+            print(
+                f"Stored master password hash: {stored_master_password_hash}")
     except FileNotFoundError:
         print("Master password file not found. Setting new master password...")
-        master_password_input = simpledialog.askstring("Set Master Password", "No master password set. Enter a new master password:", show='*')
+        master_password_input = simpledialog.askstring(
+            "Set Master Password", "No master password set. Enter a new master password:", show='*')
         if master_password_input:
             master_password_hash = hash_password(master_password_input, salt)
             save_master_password(master_password_hash)
             return True
         print("No master password was set by the user.")
         return False
-    
-    master_password_input = simpledialog.askstring("Master Password", "Enter the master password:", show='*')
+
+    master_password_input = simpledialog.askstring(
+        "Master Password", "Enter the master password:", show='*')
     if master_password_input:
         input_hash = hash_password(master_password_input, salt)
         print(f"Input master password hash: {input_hash}")
@@ -86,14 +93,14 @@ def verify_master_password():
             print("Incorrect master password.")
     else:
         print("No input was provided for the master password.")
-    
+
     messagebox.showerror("Error", "Incorrect master password.")
     return False
 
 
 def main_application_window(window):
     style = ttk.Style(window)
-    style.theme_use('clam') 
+    style.theme_use('clam')
     window.state('zoomed')
     main_frame = ttk.Frame(window, padding="10")
     main_frame.pack(fill='both', expand=True)
@@ -117,10 +124,12 @@ def main_application_window(window):
                     background="#5F5F5F",
                     foreground="white",
                     relief="flat")
-    style.map('Treeview.Heading', relief=[('active', 'groove'), ('pressed', 'sunken')])
+    style.map('Treeview.Heading', relief=[
+              ('active', 'groove'), ('pressed', 'sunken')])
 
     # Customize Buttons
-    style.configure('TButton', background="#5F5F5F", foreground="white", borderwidth=1)
+    style.configure('TButton', background="#5F5F5F",
+                    foreground="white", borderwidth=1)
     style.map('TButton',
               background=[('active', '#5F5F5F'), ('pressed', 'black')],
               foreground=[('pressed', 'white'), ('active', 'white')])
@@ -133,7 +142,7 @@ def main_application_window(window):
 
     # Search Frame
     search_frame = ttk.Frame(main_frame)
-    search_frame.grid(row=1, column=0, sticky='ew') 
+    search_frame.grid(row=1, column=0, sticky='ew')
     search_frame.columnconfigure(0, weight=1)
 
     # Search Entry
@@ -141,15 +150,16 @@ def main_application_window(window):
     search_entry.grid(row=0, column=0, padx=(10, 0), pady=10, sticky='ew')
 
     # Search Button
-    search_button = ttk.Button(search_frame, text="Search", command=lambda: search_website(search_entry.get()))
+    search_button = ttk.Button(
+        search_frame, text="Search", command=lambda: search_website(search_entry.get()))
     search_button.grid(row=0, column=1, padx=(10, 0), pady=10)
 
     def generate_password():
-         # Randomly generates a password
+        # Randomly generates a password
 
-        letters = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"  
-        numbers = "23456789"  
-        symbols = "!#$%&*+@^_"  
+        letters = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+        numbers = "23456789"
+        symbols = "!#$%&*+@^_"
 
         # Ensure at least one character of each  type
         password = [
@@ -158,28 +168,25 @@ def main_application_window(window):
             choice(symbols)
         ]
 
-        
         password += [
             choice(letters + numbers + symbols)
-            for _ in range(randint(8, 13))  
+            for _ in range(randint(8, 13))
         ]
 
         shuffle(password)  # Shuffle to randomize the order
 
         sec_password = "".join(password)
-        
 
         password_entry.delete(0, END)
         password_entry.insert(0, sec_password)
         pyperclip.copy(sec_password)
-
 
     def create_encryption_key():
         key = AESGCM.generate_key(bit_length=128)
         with open(ENCRYPTION_KEY_FILE, 'wb') as f:
             f.write(key)
         return key
-    
+
     # Function to load the encryption key
     def load_encryption_key():
         if not os.path.exists(ENCRYPTION_KEY_FILE):
@@ -187,14 +194,14 @@ def main_application_window(window):
         with open(ENCRYPTION_KEY_FILE, 'rb') as f:
             key = f.read()
         return key
-    
+
     def encrypt_data(data):
         key = load_encryption_key()
         aesgcm = AESGCM(key)
         nonce = os.urandom(12)
         encrypted_data = aesgcm.encrypt(nonce, data.encode(), None)
         return base64.urlsafe_b64encode(nonce + encrypted_data).decode()
-    
+
     def decrypt_data(encrypted_data):
         key = load_encryption_key()
         aesgcm = AESGCM(key)
@@ -202,7 +209,6 @@ def main_application_window(window):
         nonce = encrypted_data[:12]
         ciphertext = encrypted_data[12:]
         return aesgcm.decrypt(nonce, ciphertext, None).decode()
-
 
   # Save password function
 
@@ -218,7 +224,8 @@ def main_application_window(window):
         }
 
         if len(website) == 0 or len(username) == 0 or len(password) == 0:
-            messagebox.showinfo(title="Oops", message="Please don't leave any fields empty.")
+            messagebox.showinfo(
+                title="Oops", message="Please don't leave any fields empty.")
         else:
             try:
                 with open("passwords.json", "r") as file:
@@ -226,23 +233,23 @@ def main_application_window(window):
                     data = json.load(file)
             except (FileNotFoundError, json.JSONDecodeError):
                 data = {}
-            
+
             # Updating old data with new data
             data.update(new_data)
 
             with open("passwords.json", "w") as file:
                 # Saving updated data
                 json.dump(data, file, indent=4)
-            
+
             # Clear all the entry fields after saving
             website_entry.delete(0, END)
             username_entry.delete(0, END)
             password_entry.delete(0, END)
 
-            messagebox.showinfo(title="Success", message="Password saved successfully!")
+            messagebox.showinfo(
+                title="Success", message="Password saved successfully!")
             load_data_to_treeview()
             show_passwords_frame()  # Show the passwords frame with updated data
-
 
     def load_data_to_treeview():
         global current_selection
@@ -258,7 +265,8 @@ def main_application_window(window):
                     # Decrypt the username before inserting it into the Treeview
                     decrypted_username = decrypt_data(details['username'])
                     # Insert the website and the decrypted username into the Treeview
-                    iid = tree.insert("", 'end', text=website, values=(website,decrypted_username))
+                    iid = tree.insert("", 'end', text=website,
+                                      values=(website, decrypted_username))
                     # If the website is the currently selected item, highlight it in the Treeview
                     if website == current_selection:
                         tree.selection_set(iid)
@@ -276,22 +284,24 @@ def main_application_window(window):
 # Function to show the details of the search term
 
     def verify_and_show_details(website):
-    # Call the master password verification function
+        # Call the master password verification function
         if verify_master_password():
             try:
                 with open("passwords.json", "r") as file:
                     data = json.load(file)
-                
+
                 username_encrypted = data[website]['username']
                 password_encrypted = data[website]['password']
-                show_email_details_window(website, username_encrypted, password_encrypted)
+                show_email_details_window(
+                    website, username_encrypted, password_encrypted)
             except (FileNotFoundError, json.JSONDecodeError):
-                messagebox.showerror("Error", "Could not load account details.")
+                messagebox.showerror(
+                    "Error", "Could not load account details.")
         else:
-            messagebox.showerror("Verification Failed", "Incorrect master password.")
+            messagebox.showerror("Verification Failed",
+                                 "Incorrect master password.")
 
 # Search functionality
-
 
     def search_website(search_input):
         try:
@@ -303,7 +313,8 @@ def main_application_window(window):
 
         # Use regular expression to match the search input
         pattern = re.compile(re.escape(search_input), re.IGNORECASE)
-        matches = {website: details for website, details in data.items() if pattern.search(website)}
+        matches = {website: details for website,
+                   details in data.items() if pattern.search(website)}
 
         if matches:
             # Create a pop-up window to display the search results
@@ -319,7 +330,8 @@ def main_application_window(window):
 
             # Function to handle the selection of an item
             def on_result_select(event):
-                selected_website = results_listbox.get(results_listbox.curselection())
+                selected_website = results_listbox.get(
+                    results_listbox.curselection())
                 results_popup.destroy()  # Close the search results window
                 verify_and_show_details(selected_website)
 
@@ -346,7 +358,8 @@ def main_application_window(window):
 
     # Place the add_password_frame in the center
         # add_password_frame.place(in_=main_frame, anchor='c', relx=0.5, rely=0.5)
-        add_password_frame.place(in_=main_frame, anchor='c', relx=0.5, rely=0.5)
+        add_password_frame.place(
+            in_=main_frame, anchor='c', relx=0.5, rely=0.5)
         # add_password_frame.pack(fill='both', expand=True)
         # Clear all the entry fields when showing the frame
         website_entry.delete(0, END)
@@ -354,8 +367,6 @@ def main_application_window(window):
         password_entry.delete(0, END)
         # Set focus to the website entry field
         website_entry.focus_set()
-        
-        
 
     def center_add_password_frame(event):
         nonlocal add_password_frame
@@ -369,12 +380,10 @@ def main_application_window(window):
         add_password_frame.place_forget()
         passwords_frame.grid()
         load_data_to_treeview()
-       
 
-   
     global username_content
     global password_content
-    
+
     def show_email_details_window(website, username_encrypted, password_encrypted):
         username = decrypt_data(username_encrypted)
         password = decrypt_data(password_encrypted)
@@ -406,12 +415,16 @@ def main_application_window(window):
             detail_window.lift()
 
         # Copy buttons
-        copy_username_button = tk.Button(detail_window, text="Copy", command=lambda: copy_to_clipboard(username))
-        copy_password_button = tk.Button(detail_window, text="Copy", command=lambda: copy_to_clipboard(password))
-        
+        copy_username_button = tk.Button(
+            detail_window, text="Copy", command=lambda: copy_to_clipboard(username))
+        copy_password_button = tk.Button(
+            detail_window, text="Copy", command=lambda: copy_to_clipboard(password))
+
         # Edit and Delete buttons
-        edit_button = tk.Button(detail_window, text="Edit", command=lambda: edit_email_details(website))
-        delete_button = tk.Button(detail_window, text="Delete", command=lambda: delete_email_details(website))
+        edit_button = tk.Button(
+            detail_window, text="Edit", command=lambda: edit_email_details(website))
+        delete_button = tk.Button(
+            detail_window, text="Delete", command=lambda: delete_email_details(website))
 
         # Place widgets on the detail window
         website_label.grid(row=0, column=0)
@@ -432,9 +445,9 @@ def main_application_window(window):
     # Function to handle when a treeview item is clicked
     def on_treeview_click(event):
         # First, check if there is any selected item
-        
+
         if not tree.selection():
-            
+
             return  # Exit the function if nothing is selected
 
         # Since there is a selection, proceed to get the selected item
@@ -449,7 +462,8 @@ def main_application_window(window):
                 password = data[website]['password']
                 show_email_details_window(website, username, password)
             except (FileNotFoundError, json.JSONDecodeError):
-                messagebox.showerror("Error", "Could not load account details.")
+                messagebox.showerror(
+                    "Error", "Could not load account details.")
 
     def on_edit_window_close():
         # This function is called when the edit window is closed
@@ -464,7 +478,6 @@ def main_application_window(window):
         # If the detail window is open, bring it to the front
         if detail_window:
             detail_window.lift()
-
 
     def edit_email_details(website):
         global current_selection, detail_window
@@ -492,20 +505,20 @@ def main_application_window(window):
         password_entry = tk.Entry(edit_window, width=35)
         password_entry.insert(0, current_password)  # Insert decrypted password
 
-
-
         def update_and_show_details(website):
             try:
                 with open("passwords.json", "r") as file:
                     data = json.load(file)
                 username_encrypted = data[website]['username']
                 password_encrypted = data[website]['password']
-                show_email_details_window(website, username_encrypted, password_encrypted)
+                show_email_details_window(
+                    website, username_encrypted, password_encrypted)
             except (FileNotFoundError, json.JSONDecodeError):
-                messagebox.showerror("Error", "Could not load account details.")
-
+                messagebox.showerror(
+                    "Error", "Could not load account details.")
 
         # Save function
+
         def save_edited_details():
            # Update the data with the new username and password
             new_username = username_entry.get()
@@ -517,7 +530,7 @@ def main_application_window(window):
             # Save the updated data to the file
             with open("passwords.json", "w") as file:
                 json.dump(data, file, indent=4)
-            
+
             # Inform the user and close the edit window
             messagebox.showinfo("Success", "Details updated successfully.")
 
@@ -530,23 +543,25 @@ def main_application_window(window):
                 detail_window.destroy()
             load_data_to_treeview()  # Refresh the Treeview
             reconnect_treeview(tree)  # Reconnect the Treeview click event
-           
 
         # Layout
         tk.Label(edit_window, text="Username/Email:").grid(row=0, column=0)
         username_entry.grid(row=0, column=1)
         tk.Label(edit_window, text="Password:").grid(row=1, column=0)
         password_entry.grid(row=1, column=1)
-        save_button = tk.Button(edit_window, text="Save", command=save_edited_details)
+        save_button = tk.Button(edit_window, text="Save",
+                                command=save_edited_details)
         save_button.grid(row=2, column=1)
-        #After closing the edit window, reconnect the treeview select event
-        edit_window.protocol("WM_DELETE_WINDOW", lambda: reconnect_treeview(tree))
+        # After closing the edit window, reconnect the treeview select event
+        edit_window.protocol("WM_DELETE_WINDOW",
+                             lambda: reconnect_treeview(tree))
 
         edit_window.protocol("WM_DELETE_WINDOW", on_edit_window_close)
 
         # Start the main loop of the edit window
         edit_window.mainloop()
 # Function to reconnect the treeview select event
+
     def reconnect_treeview(tree):
         global current_selection
         print("Reconnecting Treeview...")
@@ -560,14 +575,14 @@ def main_application_window(window):
                     break
         print("Treeview reconnected.")
 
-    
     def delete_email_details(website):
         global detail_window, current_selection
         if detail_window:
             detail_window.destroy()
             detail_window = None
 
-        confirm = messagebox.askyesno("Confirm Deletion", f"Are you sure you want to delete the details for {website}?")
+        confirm = messagebox.askyesno(
+            "Confirm Deletion", f"Are you sure you want to delete the details for {website}?")
         if confirm:
             try:
                 with open("passwords.json", "r") as file:
@@ -576,26 +591,28 @@ def main_application_window(window):
                     del data[website]
                     with open("passwords.json", "w") as file:
                         json.dump(data, file, indent=4)
-                    messagebox.showinfo("Success", "Details deleted successfully.")
+                    messagebox.showinfo(
+                        "Success", "Details deleted successfully.")
                 else:
-                    messagebox.showinfo("Info", "The item to delete does not exist.")
+                    messagebox.showinfo(
+                        "Info", "The item to delete does not exist.")
             except (FileNotFoundError, json.JSONDecodeError):
-                messagebox.showerror("Error", "Could not delete account details.")
+                messagebox.showerror(
+                    "Error", "Could not delete account details.")
             finally:
                 current_selection = None
                 load_data_to_treeview()
                 if tree.selection():
                     tree.selection_remove(tree.selection())
 
-
-   
     window.title("CipherPass")
     window.config(padx=50, pady=50)
 
-      # Treeview
-    tree = ttk.Treeview(passwords_frame, columns=("Website", "Email"), show='headings', height=10)
+    # Treeview
+    tree = ttk.Treeview(passwords_frame, columns=(
+        "Website", "Email"), show='headings', height=10)
     tree.grid(row=1, column=0, columnspan=3, pady=10, sticky='nsew')
-    
+
     tree.column("Website", width=120, anchor='w')
     tree.heading("Website", text="Website")
     tree.column("Email", width=180, anchor='w')
@@ -610,13 +627,11 @@ def main_application_window(window):
     add_button_frame = ttk.Frame(passwords_frame)
     add_button_frame.grid(row=0, column=0, sticky='nsew')
     add_button_frame.columnconfigure(0, weight=1)  # Allow the frame to expand
-
-    add_button = ttk.Button(add_button_frame, text="+", command=show_add_password_frame)
+    add_button = ttk.Button(add_button_frame, text="+",
+                            command=show_add_password_frame)
     add_button.grid(row=0, column=0)  # Button centered in its frame
-
-    cancel_button = tk.Button(add_password_frame, text="Cancel", command=show_passwords_frame)
-
-    
+    cancel_button = tk.Button(
+        add_password_frame, text="Cancel", command=show_passwords_frame)
 
     # Labels
     website_label = tk.Label(add_password_frame, text="Website")
@@ -629,9 +644,11 @@ def main_application_window(window):
     password_entry = tk.Entry(add_password_frame, width=35)
 
     # Buttons
-    generate_password_button = tk.Button(add_password_frame, text="Generate Password", command=generate_password)
+    generate_password_button = tk.Button(
+        add_password_frame, text="Generate Password", command=generate_password)
     save_button = tk.Button(add_password_frame, text="Save", command=save)
-    cancel_button = tk.Button(add_password_frame, text="Cancel", command=show_passwords_frame)
+    cancel_button = tk.Button(
+        add_password_frame, text="Cancel", command=show_passwords_frame)
 
     # Layout for add_password_frame
     website_label.grid(row=0, column=0)
@@ -648,7 +665,7 @@ def main_application_window(window):
     show_passwords_frame()
 
     window.mainloop()
-    
+
 
 if __name__ == "__main__":
     print("Starting the application...")
@@ -657,7 +674,7 @@ if __name__ == "__main__":
 
     verification_passed = verify_master_password()
     print(f"Verification passed: {verification_passed}")
-    
+
     if verification_passed:
         print("Displaying the main application window...")
         root.deiconify()  # Show the window if the master password is verified
@@ -666,8 +683,3 @@ if __name__ == "__main__":
     else:
         print("Verification failed or cancelled. Exiting the application...")
         root.destroy()
-
-
-
-
-
